@@ -1,0 +1,6 @@
+5
+BOOK 1 hotel1 1 10
+BOOK 2 hotel1 2 2
+BOOK 86405 hotel1 1 10
+CLIENTS hotel1
+ROOMS hotel1

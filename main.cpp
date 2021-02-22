@@ -2,18 +2,10 @@
 #include <stdlib.h>
 #include <iostream>
 #include <unordered_map>
-#include <deque>
+#include <queue>
 
 
-/*
-Для проверки
-4
-BOOK 1 hotel1 1 1
-BOOK 2 hotel1 2 2
-CLIENTS hotel1
-ROOMS hotel1
-
-*/
+const static int BOOKING_MAX_PERIOD = 86400;
 
 
 struct Booking {
@@ -26,13 +18,37 @@ class Hotel {
 private:
   std::unordered_map< uint, uint> clients_;
   uint rooms_booking_count_;
-  std::deque<Booking> bookings_;
+  std::queue<Booking> bookings_;
+
+  void removeLastBooking() {
+    const Booking& old_booking = bookings_.front();
+
+    rooms_booking_count_ -= old_booking.rooms_count;
+
+    auto old_client_itr = clients_.find( old_booking.client_id );
+    old_client_itr->second -= old_booking.rooms_count;
+    if ( old_client_itr->second == 0 ) {
+      clients_.erase( old_client_itr );
+    }
+
+    bookings_.pop();
+  }
+
+  void checkBookings( int64_t booking_time ) {
+    while ( !bookings_.empty()
+    && bookings_.front().booking_time <= booking_time - BOOKING_MAX_PERIOD  ) {
+      removeLastBooking();
+    }
+  }
+
 public:
-  size_t getClientsCount() {
+  size_t getClientsCount( int64_t booking_time ) {
+    checkBookings(booking_time);
     return clients_.size();
   }
 
-  size_t getRoomsCount() {
+  size_t getRoomsCount( int64_t book_time ) {
+    checkBookings( book_time );
     return rooms_booking_count_;
   }
 
@@ -40,8 +56,7 @@ public:
 
     rooms_booking_count_ += booking.rooms_count;
     clients_[booking.client_id] += booking.rooms_count;
-
-    printf("Client size: %ld\n", clients_.size());
+    bookings_.push( booking );
 
   }
 };
@@ -62,12 +77,12 @@ public:
   }
 
   size_t getHotelClientsCount( const std::string &hotel_name ) {
-      return hotels_[hotel_name].getClientsCount();
+      return hotels_[hotel_name].getClientsCount( last_time_ );
   }
 
 
   size_t getHotelRoomsCount( const std::string &hotel_name ) {
-      return hotels_[hotel_name].getRoomsCount();
+      return hotels_[hotel_name].getRoomsCount( last_time_ );
   }
 
 };
@@ -80,7 +95,6 @@ int main() {
   int q;
   std::cin >> q;
   for (int i=0; i < q; ++i ) {
-    printf("Шаг %d: введите команду\n", i );
 
     std::string cmd_type = "";
     std::cin >> cmd_type;
@@ -91,7 +105,6 @@ int main() {
       uint client_id, rooms_count;
       std::cin >> book_time >> hotel_name >> client_id >> rooms_count;
       booking_manager.bookHotel( book_time, hotel_name, client_id, rooms_count  );
-
 
     } else if ( cmd_type == "CLIENTS" ) {
       std::string hotel_name = "";
@@ -106,9 +119,6 @@ int main() {
     } else {
       abort();
     }
-
-
-
   }
   return 0;
 }
